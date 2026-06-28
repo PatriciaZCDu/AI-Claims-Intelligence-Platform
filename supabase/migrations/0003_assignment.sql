@@ -8,8 +8,8 @@
 -- SHARED pool keyed on status='senior_review', and the Operations Leader sees
 -- everything — neither needs a per-claim owner.
 
-alter table claims add column assigned_to uuid references personnel(id);
-create index idx_claims_assigned on claims (assigned_to);
+alter table claims add column if not exists assigned_to uuid references personnel(id);
+create index if not exists idx_claims_assigned on claims (assigned_to);
 
 -- Backfill EXISTING claims deterministically across the four adjusters, reusing the
 -- row_number() % 4 bucketing idiom from seed.sql. On a fresh `supabase db reset` the
