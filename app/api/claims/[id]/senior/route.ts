@@ -22,7 +22,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const body = (await req.json().catch(() => ({}))) as { decision?: string; notes?: string };
-  if (body.decision !== "approve" && body.decision !== "request_revision") {
+  const decision = body.decision ?? "";
+  if (decision !== "approve" && decision !== "request_revision" && decision !== "deny") {
     return NextResponse.json({ error: "invalid decision" }, { status: 400 });
   }
 
@@ -30,14 +31,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     claim_id: id,
     reviewer_role: role,
     reviewer_id: actor.id,
-    decision: body.decision,
+    decision,
     notes: body.notes ?? null,
   });
 
-  if (body.decision === "approve") {
+  if (decision === "approve") {
     await admin.from("claims").update({ status: "sent_to_repair" }).eq("id", id);
     await logAudit(admin, id, role, "Senior Approved", {});
     await logAudit(admin, id, "system", "Sent to Repair System", {});
+  } else if (decision === "deny") {
+    await admin.from("claims").update({ status: "rejected" }).eq("id", id);
+    await logAudit(admin, id, role, "Claim Denied", { reason: body.notes ?? null });
   } else {
     await admin.from("claims").update({ status: "adjuster_review" }).eq("id", id);
     await logAudit(admin, id, role, "Senior Requested Revision", {});

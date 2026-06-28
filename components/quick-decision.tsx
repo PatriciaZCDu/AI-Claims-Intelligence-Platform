@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 
 type Variant = "primary" | "secondary" | "danger";
+type Action = { label: string; decision: string; variant?: Variant; confirm?: string };
 
 export function QuickDecision({
   claimId,
@@ -12,20 +13,22 @@ export function QuickDecision({
 }: {
   claimId: string;
   endpoint?: "review" | "senior";
-  actions: { label: string; decision: string; variant?: Variant }[];
+  actions: Action[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function act(decision: string) {
-    setBusy(decision);
+  async function act(action: Action) {
+    // Terminal/destructive actions (e.g. deny) confirm before firing.
+    if (action.confirm && !window.confirm(action.confirm)) return;
+    setBusy(action.decision);
     setError(null);
     try {
       const res = await fetch(`/api/claims/${claimId}/${endpoint}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ decision }),
+        body: JSON.stringify({ decision: action.decision }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -48,7 +51,7 @@ export function QuickDecision({
             key={a.decision}
             variant={a.variant ?? "secondary"}
             disabled={busy !== null}
-            onClick={() => act(a.decision)}
+            onClick={() => act(a)}
           >
             {busy === a.decision ? "…" : a.label}
           </Button>

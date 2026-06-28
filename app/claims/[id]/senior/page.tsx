@@ -75,6 +75,7 @@ export default async function SeniorPage({ params }: { params: Promise<{ id: str
       : adjReview?.variance ?? null;
 
   const alreadyApproved = claim.status === "sent_to_repair" || claim.status === "approved";
+  const denied = claim.status === "rejected";
 
   return (
     <div>
@@ -134,10 +135,17 @@ export default async function SeniorPage({ params }: { params: Promise<{ id: str
                 <NavLinkRow href={`/claims/${id}`}>Back to claim</NavLinkRow>
                 <NavLinkRow href={`/claims/${id}/audit`}>View audit trail</NavLinkRow>
               </>
+            ) : denied ? (
+              <>
+                <Badge tone="red">Claim denied · rejected</Badge>
+                <NavLinkRow href={`/claims/${id}`}>Back to claim</NavLinkRow>
+                <NavLinkRow href={`/claims/${id}/audit`}>View audit trail</NavLinkRow>
+              </>
             ) : (
               <>
                 <p className="text-xs text-slate-500">
                   Approving authorizes the repair and dispatches the claim to the repair system.
+                  Denying rejects the claim and routes it out of the queue.
                 </p>
                 <QuickDecision
                   claimId={id}
@@ -145,6 +153,13 @@ export default async function SeniorPage({ params }: { params: Promise<{ id: str
                   actions={[
                     { label: "Approve", decision: "approve", variant: "primary" },
                     { label: "Request Revision", decision: "request_revision", variant: "secondary" },
+                    {
+                      label: "Deny",
+                      decision: "deny",
+                      variant: "danger",
+                      confirm:
+                        "Deny this claim? It will be rejected and removed from the approval queue.",
+                    },
                   ]}
                 />
               </>

@@ -12,6 +12,7 @@ const FILTERS: { key: string; label: string; options: { value: string; label: st
       { value: "senior_review", label: "Senior review" },
       { value: "approved", label: "Approved" },
       { value: "sent_to_repair", label: "Sent to repair" },
+      { value: "rejected", label: "Rejected" },
       { value: "processing", label: "Processing" },
     ],
   },
