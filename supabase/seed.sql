@@ -232,7 +232,7 @@ union all select id,'adjuster','Adjuster Updated Severity','{}'::jsonb, created_
 with c as (
   insert into claims (policy_number, claim_number, vin, accident_summary, customer_region,
                       deployment_region, vehicle_make, vehicle_model, vehicle_year, status, created_at, assigned_to)
-  values ('POL-100022','10022','5YJYGDEE7MF123456','Side impact, partial photo coverage submitted',
+  values ('POL-100022','10022','5YJYGDEE7MF123456','Side-impact collision; customer has not yet uploaded damage photos.',
           'US-West','US','Tesla','Model Y',2022,'adjuster_review', now() - interval '90 minutes',
           '11111111-1111-1111-1111-111111111102')
   returning id, created_at
@@ -263,6 +263,56 @@ select id, 'complete', 'medium', 88, 1900, 2600,
   'Rear damage localized with moderate-to-high confidence. Routed to enhanced review because overall confidence is below the 95% auto-standard threshold.',
   'enhanced','gemini','gemini-2.5-flash', 1040, created_at, created_at + interval '4 seconds'
 from c;
+
+-- ── Data-consistency pass (mirrors what the live DB was corrected to) ─────────
+-- Runs after every claim/assessment exists so summary and detail always agree.
+
+-- Low-confidence claims: honest "no photos" reasoning, null severity/cost, and
+-- valid routing — deterministically split into escalate (<55) and request_photos
+-- (55–69) so the queue shows a realistic spread.
+update assessments a
+set confidence = case when (get_byte(decode(md5(a.claim_id::text),'hex'),1) % 3) = 0
+                      then 40 + (get_byte(decode(md5(a.claim_id::text),'hex'),2) % 13)
+                      else 56 + (get_byte(decode(md5(a.claim_id::text),'hex'),2) % 13) end,
+    routing = (case when (get_byte(decode(md5(a.claim_id::text),'hex'),1) % 3) = 0
+                    then 'escalate' else 'request_photos' end)::routing_decision,
+    severity = null, cost_low = null, cost_high = null,
+    reasoning_summary = case when (get_byte(decode(md5(a.claim_id::text),'hex'),1) % 3) = 0
+      then 'No usable photos were submitted and the loss description suggests possible structural involvement — escalated for manual inspection before any estimate.'
+      else 'No photos were submitted, so damage could not be localized. Requesting additional photos from the customer before an estimate can be made.' end
+where a.confidence < 70;
+
+-- Aggregate cost = sum of line-item finding costs (reconciles the PRD claims).
+update assessments a
+set cost_low = s.lo, cost_high = s.hi
+from (
+  select id,
+    (select sum((f->>'costLow')::int)  from jsonb_array_elements(findings) f) as lo,
+    (select sum((f->>'costHigh')::int) from jsonb_array_elements(findings) f) as hi
+  from assessments where jsonb_array_length(coalesce(findings,'[]'::jsonb)) > 0
+) s
+where a.id = s.id and (a.cost_low is distinct from s.lo or a.cost_high is distinct from s.hi);
+
+-- Attach a scenario-matched, self-hosted damage photo (public/samples) to every
+-- claim that has findings (high/medium confidence). Low-confidence claims stay
+-- photo-less — that is exactly why they couldn't be assessed.
+with photos(scenario, path) as (values
+  (0,'/samples/front-bumper.jpg'), (1,'/samples/rear-bumper.jpg'),
+  (2,'/samples/side-door.jpg'),    (3,'/samples/quarter-panel.jpg'),
+  (4,'/samples/front-severe.jpg'), (5,'/samples/front-minor.jpg'),
+  (6,'/samples/hail-hood.jpg'),    (7,'/samples/quarter-panel.jpg'),
+  (8,'/samples/windshield.jpg'),   (9,'/samples/side-door.jpg')
+),
+tgt as (
+  select a.claim_id, (get_byte(decode(md5(a.claim_id::text),'hex'),0) % 10) as scenario
+  from assessments a
+  where jsonb_array_length(coalesce(a.findings,'[]'::jsonb)) > 0
+    and not exists (select 1 from claim_images i where i.claim_id = a.claim_id)
+)
+insert into claim_images (claim_id, kind, storage_path, validation)
+select t.claim_id, 'damage', p.path,
+       '{"resolution_ok":true,"blur_ok":true,"duplicate":false,"vehicle_detected":true}'::jsonb
+from tgt t join photos p on p.scenario = t.scenario;
 
 -- ── Pipeline steps for every seeded assessment ───────────────────────────────
 -- The 7 stages mirror lib/pipeline.ts (PIPELINE_STEPS), exactly as the analyze
