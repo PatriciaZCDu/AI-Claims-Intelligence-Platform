@@ -108,7 +108,9 @@ export default async function ClaimDetail({ params }: { params: Promise<{ id: st
                   <p className="mt-1 text-sm text-slate-700">{assessment.reasoning_summary}</p>
                 </div>
                 <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-                  Cannot verify structural integrity / frame alignment from the submitted photos.
+                  {images.length > 0
+                    ? "Submitted photos are insufficient to verify structural integrity / frame alignment — additional angles required."
+                    : "No photos were submitted with this claim — request photos from the customer before an estimate can be made."}
                 </div>
                 {CAN.adjusterReview(role) && (
                   <div>
