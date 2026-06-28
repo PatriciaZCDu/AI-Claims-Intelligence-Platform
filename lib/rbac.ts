@@ -33,9 +33,11 @@ export async function getRole(): Promise<Role> {
  * handlers. In production these map to Supabase RLS policies per role.
  */
 export const CAN = {
-  createClaim: (r: Role) => r === "adjuster" || r === "senior_adjuster",
-  adjusterReview: (r: Role) => r === "adjuster" || r === "senior_adjuster",
-  seniorApprove: (r: Role) => r === "senior_adjuster",
+  // Operations Leader is a superuser — can do anything any role can, on top of
+  // the ops dashboard, including filing and approving new claims.
+  createClaim: (r: Role) => r === "adjuster" || r === "senior_adjuster" || r === "ops_leader",
+  adjusterReview: (r: Role) => r === "adjuster" || r === "senior_adjuster" || r === "ops_leader",
+  seniorApprove: (r: Role) => r === "senior_adjuster" || r === "ops_leader",
   // The entire Operations section — metrics, AI stats — is the Operations Leader's domain.
   viewOps: (r: Role) => r === "ops_leader",
   // Per-adjuster performance is strictly ops-leader-only.
