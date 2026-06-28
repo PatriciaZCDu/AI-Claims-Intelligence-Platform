@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/admin";
-import { getRole, CAN } from "@/lib/rbac";
+import { getActor, CAN } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const role = await getRole();
+  const actor = await getActor();
+  const role = actor.role;
   if (!CAN.seniorApprove(role)) {
     return NextResponse.json(
       { error: "Only a Senior Adjuster can approve repair authorization" },
@@ -28,6 +29,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   await admin.from("reviews").insert({
     claim_id: id,
     reviewer_role: role,
+    reviewer_id: actor.id,
     decision: body.decision,
     notes: body.notes ?? null,
   });

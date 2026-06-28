@@ -106,6 +106,8 @@ export interface Review {
   id: string;
   claim_id: string;
   reviewer_role: Role;
+  reviewer_id: string | null;
+  reviewer_name?: string | null; // resolved from the personnel roster (not a DB column)
   decision: string;
   adjuster_estimate: number | null;
   variance: number | null;

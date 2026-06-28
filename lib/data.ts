@@ -1,5 +1,6 @@
 import "server-only";
 import { getAdmin } from "./supabase/admin";
+import { personName } from "./personnel";
 import type {
   Assessment,
   AuditEntry,
@@ -59,9 +60,9 @@ export async function getClaimBundle(id: string): Promise<ClaimBundle | null> {
     claim: c as Claim,
     assessment: latest(c.assessments),
     images: (c.claim_images ?? []) as ClaimImage[],
-    reviews: ((c.reviews ?? []) as Review[]).sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    ),
+    reviews: ((c.reviews ?? []) as Review[])
+      .map((r) => ({ ...r, reviewer_name: personName(r.reviewer_id) }))
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
   };
 }
 

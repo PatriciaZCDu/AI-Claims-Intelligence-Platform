@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/admin";
-import { getRole, CAN } from "@/lib/rbac";
+import { getActor, CAN } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 
 const ACTION_LABEL: Record<string, string> = {
@@ -18,7 +18,8 @@ const NEXT_STATUS: Record<string, string> = {
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const role = await getRole();
+  const actor = await getActor();
+  const role = actor.role;
   if (!CAN.adjusterReview(role)) {
     return NextResponse.json({ error: "Your role cannot review claims" }, { status: 403 });
   }
@@ -59,6 +60,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   await admin.from("reviews").insert({
     claim_id: id,
     reviewer_role: role,
+    reviewer_id: actor.id,
     decision,
     adjuster_estimate: body.adjuster_estimate ?? null,
     variance,
