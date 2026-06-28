@@ -79,9 +79,11 @@ export default async function ClaimDetail({ params }: { params: Promise<{ id: st
     );
   }
 
+  // "Low confidence" is driven by the actual confidence/routing signal — NOT by an
+  // empty findings array. Seeded historical claims summarize severity/cost without
+  // itemized findings, so empty findings must not be mistaken for low confidence.
   const lowConf =
     (assessment.confidence ?? 0) < 70 ||
-    assessment.findings.length === 0 ||
     assessment.routing === "request_photos" ||
     assessment.routing === "escalate";
   const evidence = images.find((i) => i.kind === "damage") ?? images[0];
@@ -131,28 +133,38 @@ export default async function ClaimDetail({ params }: { params: Promise<{ id: st
                 subtitle="Structured recommendations with evidence — not free-form text"
                 right={<SeverityBadge severity={assessment.severity} />}
               />
-              <ul className="divide-y divide-slate-100">
-                {assessment.findings.map((f, i) => (
-                  <li key={i} className="p-5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-900">{f.component}</span>
-                        <SeverityBadge severity={f.severity} />
+              {assessment.findings.length > 0 ? (
+                <ul className="divide-y divide-slate-100">
+                  {assessment.findings.map((f, i) => (
+                    <li key={i} className="p-5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-900">{f.component}</span>
+                          <SeverityBadge severity={f.severity} />
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <ConfidenceBadge value={f.confidence} />
+                          <span className="text-sm font-medium text-slate-700">
+                            {moneyRange(f.costLow, f.costHigh)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <ConfidenceBadge value={f.confidence} />
-                        <span className="text-sm font-medium text-slate-700">
-                          {moneyRange(f.costLow, f.costHigh)}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="mt-1.5 text-sm text-slate-600">
-                      <span className="text-slate-400">Evidence:</span> {f.evidence}
-                    </p>
-                    <p className="text-xs text-slate-400">Location: {f.location}</p>
-                  </li>
-                ))}
-              </ul>
+                      <p className="mt-1.5 text-sm text-slate-600">
+                        <span className="text-slate-400">Evidence:</span> {f.evidence}
+                      </p>
+                      <p className="text-xs text-slate-400">Location: {f.location}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="space-y-2 p-5">
+                  <p className="text-sm text-slate-700">{assessment.reasoning_summary}</p>
+                  <p className="text-xs text-slate-400">
+                    Component-level breakdown isn&apos;t recorded for this claim — severity and the
+                    repair estimate are summarized on the right.
+                  </p>
+                </div>
+              )}
             </Card>
           )}
 
