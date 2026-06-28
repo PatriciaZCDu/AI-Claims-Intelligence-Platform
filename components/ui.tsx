@@ -70,11 +70,13 @@ export function StatTile({
   value,
   sub,
   tone = "slate",
+  href,
 }: {
   label: string;
   value: ReactNode;
   sub?: ReactNode;
   tone?: Tone;
+  href?: string;
 }) {
   const accent: Record<Tone, string> = {
     green: "text-emerald-600",
@@ -83,13 +85,33 @@ export function StatTile({
     blue: "text-blue-700",
     slate: "text-slate-900",
   };
-  return (
-    <Card className="px-5 py-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+  const tile = (
+    <Card
+      className={cn(
+        "px-5 py-4",
+        href && "group cursor-pointer transition-shadow hover:border-blue-300 hover:shadow-md",
+      )}
+    >
+      {href ? (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition-colors group-hover:text-blue-500" />
+        </div>
+      ) : (
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      )}
       <p className={cn("mt-1 text-3xl font-semibold tabular-nums", accent[tone])}>{value}</p>
       {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}
     </Card>
   );
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {tile}
+      </Link>
+    );
+  }
+  return tile;
 }
 
 export function SeverityBadge({ severity }: { severity: Severity | null }) {

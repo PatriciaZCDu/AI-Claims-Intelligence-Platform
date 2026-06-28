@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ArrowDown, Lock } from "lucide-react";
-import { Card, PageHeader } from "@/components/ui";
+import { Card, CardHeader, PageHeader, Badge } from "@/components/ui";
 import { getRole, CAN, roleLabel } from "@/lib/rbac";
+import { getRecentCorrections } from "@/lib/data";
+import { fmtTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -40,12 +42,56 @@ export default async function LearningPage() {
     );
   }
 
+  const corrections = await getRecentCorrections(8);
+
   return (
     <div>
       <PageHeader
         title="Continuous Learning Loop"
         subtitle="Adjuster feedback becomes the improvement loop — new models are validated before deployment"
       />
+
+      <Card className="mb-6">
+        <CardHeader
+          title="Recent corrections"
+          subtitle="Live signal feeding step 1 — every adjuster override becomes a training label"
+          right={<Badge tone="blue">{corrections.length} this cycle</Badge>}
+        />
+        {corrections.length === 0 ? (
+          <p className="p-6 text-sm text-slate-400">
+            No adjuster corrections recorded yet. Overrides on the review screen will appear here.
+          </p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {corrections.map((c) => (
+              <li
+                key={`${c.claim_id}-${c.created_at}`}
+                className="flex items-center justify-between gap-4 px-5 py-3"
+              >
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium text-slate-900">
+                    {c.reviewer_name ?? "Claims Adjuster"}
+                  </span>
+                  <Link href={`/claims/${c.claim_id}`} className="text-blue-600 hover:text-blue-700">
+                    Claim {c.claim_number}
+                  </Link>
+                </div>
+                <div className="flex items-center gap-3">
+                  {c.variance == null ? (
+                    <Badge tone="slate">—</Badge>
+                  ) : (
+                    <Badge tone={Math.abs(c.variance) >= 15 ? "red" : "amber"}>
+                      {`${c.variance > 0 ? "+" : ""}${c.variance.toFixed(1)}%`}
+                    </Badge>
+                  )}
+                  <span className="text-xs text-slate-500">{fmtTime(c.created_at)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       <Card className="p-8">
         <div className="mx-auto flex max-w-md flex-col items-stretch">
           {LOOP.map((step, i) => (

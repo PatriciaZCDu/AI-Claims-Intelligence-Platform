@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/admin";
-import { getRole, CAN } from "@/lib/rbac";
+import { getActor, CAN } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 
 export async function POST(req: Request) {
-  const role = await getRole();
+  const actor = await getActor();
+  const role = actor.role;
   if (!CAN.createClaim(role)) {
     return NextResponse.json({ error: "Your role cannot create claims" }, { status: 403 });
   }
@@ -37,6 +38,8 @@ export async function POST(req: Request) {
       vehicle_model: b.vehicle_model || null,
       vehicle_year: b.vehicle_year ? Number(b.vehicle_year) : null,
       status: "intake",
+      // The person who files a claim owns it — so it lands in their "My queue".
+      assigned_to: actor.id,
     })
     .select("id")
     .single();

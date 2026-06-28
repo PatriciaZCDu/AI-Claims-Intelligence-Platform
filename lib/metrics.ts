@@ -1,8 +1,10 @@
 import "server-only";
 import { getAdmin } from "./supabase/admin";
+import { getQueue } from "./data";
 import { PLATFORM } from "./platform";
-import { PERSONNEL } from "./personnel";
-import type { Role } from "./types";
+import { PERSONNEL, type Person } from "./personnel";
+import { triagePriority } from "./triage";
+import type { ClaimStatus, Role } from "./types";
 
 const sinceISO = (hours: number) => new Date(Date.now() - hours * 3600_000).toISOString();
 
@@ -181,4 +183,42 @@ export async function getAdjusterStats(): Promise<AdjusterStat[]> {
 
   // Most active first, then by name for stable ordering.
   return [...base.values()].sort((a, b) => b.reviews - a.reviews || a.name.localeCompare(b.name));
+}
+
+// ── My worklist (adjuster + senior reviewer) ─────────────────────────────────
+/** Open, in-flight claim statuses — the worklist (excludes approved/sent_to_repair/rejected). */
+export const ACTIVE_STATUSES: ClaimStatus[] = [
+  "intake",
+  "validated",
+  "processing",
+  "assessed",
+  "adjuster_review",
+  "senior_review",
+];
+
+export interface MyQueueStats {
+  open: number; // size of my worklist
+  needsAttention: number; // subset with triage level !== "normal"
+  label: string; // persona-specific tile label
+}
+
+/**
+ * Persona-scoped worklist counts for the "my queue" tile. Adjusters see claims
+ * assigned to them; senior adjusters see everything awaiting senior approval;
+ * ops leaders get the global Command Center instead (null here).
+ */
+export async function getMyQueueStats(actor: Person): Promise<MyQueueStats | null> {
+  if (actor.role === "ops_leader") return null;
+
+  const rows =
+    actor.role === "senior_adjuster"
+      ? await getQueue({ statusIn: ["senior_review"] })
+      : await getQueue({ assignedTo: actor.id, statusIn: ACTIVE_STATUSES });
+
+  return {
+    open: rows.length,
+    needsAttention: rows.filter((r) => triagePriority(r.claim, r.assessment).level !== "normal")
+      .length,
+    label: actor.role === "senior_adjuster" ? "Awaiting your approval" : "Assigned to you",
+  };
 }

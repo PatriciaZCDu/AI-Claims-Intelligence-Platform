@@ -155,14 +155,14 @@ function AdjusterRows({
           {label}
         </td>
       </tr>
-      {rows.map((a) => {
+      {rows.map((a, i) => {
+        const anon = `${kind === "senior" ? "Senior" : "Adjuster"} ${String.fromCharCode(65 + i)}`;
         const overrideTone =
           a.overrideRate >= 15 ? "text-red-600" : a.overrideRate >= 10 ? "text-amber-600" : "text-slate-900";
         return (
           <tr key={a.id} className="text-slate-700">
             <td className="px-5 py-3">
-              <div className="font-medium text-slate-900">{a.name}</div>
-              <div className="text-xs text-slate-500">{roleLabel(a.role)}</div>
+              <div className="font-medium text-slate-900">{anon}</div>
             </td>
             <td className="px-5 py-3 text-right tabular-nums">{a.reviews}</td>
             <td className={`px-5 py-3 text-right font-semibold tabular-nums ${overrideTone}`}>

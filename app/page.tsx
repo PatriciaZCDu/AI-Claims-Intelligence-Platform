@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
-import { getCommandCenter } from "@/lib/metrics";
-import { getRole, CAN } from "@/lib/rbac";
+import { getCommandCenter, getMyQueueStats } from "@/lib/metrics";
+import { getActor, CAN, roleLabel } from "@/lib/rbac";
 import { getAdmin } from "@/lib/supabase/admin";
 import { PLATFORM, activeModelLabel } from "@/lib/platform";
 import { Badge, Card, CardHeader, DefinitionRow, NavLinkRow, PageHeader, StatTile } from "@/components/ui";
@@ -10,13 +10,15 @@ export const dynamic = "force-dynamic";
 export default async function CommandCenter() {
   const configured = Boolean(getAdmin());
   const m = await getCommandCenter();
-  const role = await getRole();
+  const actor = await getActor();
+  const role = actor.role;
+  const my = await getMyQueueStats(actor);
 
   return (
     <div>
       <PageHeader
         title="Operations Command Center"
-        subtitle={`${PLATFORM.environment} · ${PLATFORM.name}`}
+        subtitle={`Acting as ${roleLabel(role)} · ${PLATFORM.environment}`}
       />
 
       {!configured && (
@@ -35,12 +37,61 @@ export default async function CommandCenter() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile label="Claims (24h)" value={m.claimsToday} tone="blue" sub="Processed today" />
-        <StatTile label="Pending Review" value={m.pendingReview} tone="amber" sub="Awaiting a human" />
-        <StatTile label="Low Confidence" value={m.lowConfidence} tone="red" sub="< 70% confidence" />
-        <StatTile label="Escalations" value={m.escalations} tone="red" sub="Routed to manual" />
-      </div>
+      {my && (
+        <section className="mb-6">
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">Your work</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <StatTile
+              label={my.label}
+              value={my.open}
+              tone="blue"
+              sub="Open in your queue"
+              href="/claims?mine=1"
+            />
+            <StatTile
+              label="Needs attention"
+              value={my.needsAttention}
+              tone={my.needsAttention > 0 ? "red" : "slate"}
+              sub="Escalations & low confidence"
+              href="/claims?mine=1"
+            />
+          </div>
+        </section>
+      )}
+
+      <section>
+        {my && <h2 className="mb-3 text-sm font-semibold text-slate-900">Platform overview</h2>}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatTile
+            label="Claims (24h)"
+            value={m.claimsToday}
+            tone="blue"
+            sub="Processed today"
+            href="/claims"
+          />
+          <StatTile
+            label="Pending Review"
+            value={m.pendingReview}
+            tone="amber"
+            sub="Awaiting a human"
+            href="/claims"
+          />
+          <StatTile
+            label="Low Confidence"
+            value={m.lowConfidence}
+            tone="red"
+            sub="< 70% confidence"
+            href="/claims?confidence=low"
+          />
+          <StatTile
+            label="Escalations"
+            value={m.escalations}
+            tone="red"
+            sub="Routed to manual"
+            href="/claims?routing=escalate"
+          />
+        </div>
+      </section>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">

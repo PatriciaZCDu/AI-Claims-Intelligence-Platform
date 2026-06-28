@@ -26,6 +26,17 @@ const FILTERS: { key: string; label: string; options: { value: string; label: st
     ],
   },
   {
+    key: "routing",
+    label: "Routing",
+    options: [
+      { value: "", label: "Any routing" },
+      { value: "escalate", label: "Escalate" },
+      { value: "request_photos", label: "Request photos" },
+      { value: "enhanced", label: "Enhanced review" },
+      { value: "standard", label: "Standard" },
+    ],
+  },
+  {
     key: "severity",
     label: "Severity",
     options: [

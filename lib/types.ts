@@ -48,6 +48,7 @@ export interface Claim {
   vehicle_make: string | null;
   vehicle_model: string | null;
   vehicle_year: number | null;
+  assigned_to: string | null;
   status: ClaimStatus;
   created_at: string;
 }
