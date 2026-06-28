@@ -80,22 +80,54 @@ select
   850 + floor(random()*700)::int, created_at, created_at + interval '4 seconds'
 from _seed;
 
--- Reviews on completed claims → drives the live "human override rate" metric (~9%).
+-- Adjuster reviews on completed claims → drive the live "human override rate"
+-- metric and the per-adjuster scorecard. Each review is attributed to one of the
+-- four Claims Adjusters, whose modify (override) rates deliberately differ so the
+-- Operations Leader's scorecard shows real spread.
 -- NOTE: the `case when random()...` is applied in an OUTER query over an already
 -- sampled set. Do NOT fold it into a `select ... order by random() limit 60`:
 -- a target-list random() combined with `order by random()` + LIMIT lets the
 -- planner re-evaluate it against the sort key and badly skews the ratio.
-insert into reviews (claim_id, reviewer_role, decision, created_at)
-select claim_id, 'adjuster',
-       case when random() < 0.09 then 'modify' else 'accept' end,
-       created_at + interval '18 minutes'
-from (
-  select id as claim_id, created_at
-  from _seed
-  where status = 'sent_to_repair'
-  order by random()
-  limit 60
-) sampled;
+-- Bucket via row_number() over the *materialized* sample — NOT a random() in the
+-- select list of the `order by random() limit` query, which the planner would
+-- re-evaluate against the sort key and collapse every row into one bucket (the
+-- same skew the note above warns about).
+with sampled as (
+  select id as claim_id, created_at from _seed where status = 'sent_to_repair'
+  order by random() limit 60
+),
+numbered as (
+  select claim_id, created_at, (row_number() over ())::int % 4 as bucket from sampled
+)
+insert into reviews (claim_id, reviewer_id, reviewer_role, decision, created_at)
+select n.claim_id, adj.id, 'adjuster',
+       case when random() < adj.modify_rate then 'modify' else 'accept' end,
+       n.created_at + interval '18 minutes'
+from numbered n
+join (values
+  (0, '11111111-1111-1111-1111-111111111101'::uuid, 0.05),  -- Maya Chen   · low override
+  (1, '11111111-1111-1111-1111-111111111102'::uuid, 0.12),  -- Daniel Osei
+  (2, '11111111-1111-1111-1111-111111111103'::uuid, 0.07),  -- Sofia Marchetti
+  (3, '11111111-1111-1111-1111-111111111104'::uuid, 0.20)   -- Ravi Patel  · high override
+) adj(bucket, id, modify_rate) on adj.bucket = n.bucket;
+
+-- Senior-adjuster history → populates the two Senior Adjusters' scorecard rows.
+with sampled as (
+  select id as claim_id, created_at from _seed where status = 'sent_to_repair'
+  order by random() limit 45
+),
+numbered as (
+  select claim_id, created_at, (row_number() over ())::int % 2 as bucket from sampled
+)
+insert into reviews (claim_id, reviewer_id, reviewer_role, decision, created_at)
+select n.claim_id, snr.id, 'senior_adjuster',
+       case when random() < 0.12 then 'request_revision' else 'approve' end,
+       n.created_at + interval '40 minutes'
+from numbered n
+join (values
+  (0, '22222222-2222-2222-2222-222222222201'::uuid),  -- Theo Park
+  (1, '22222222-2222-2222-2222-222222222202'::uuid)   -- Grace Whitfield
+) snr(bucket, id) on snr.bucket = n.bucket;
 
 -- ── Three PRD-named claims with rich findings (recognizable in the queue) ─────
 
