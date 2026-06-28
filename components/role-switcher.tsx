@@ -1,20 +1,24 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ROLES } from "@/lib/roles";
+import { PERSONNEL } from "@/lib/personnel";
+import { roleLabel } from "@/lib/roles";
 import type { Role } from "@/lib/types";
 
-export function RoleSwitcher({ initialRole }: { initialRole: Role }) {
+// Personas grouped by role so the picker reads as a roster of named people.
+const GROUPS: Role[] = ["adjuster", "senior_adjuster", "ops_leader"];
+
+export function RoleSwitcher({ initialUserId }: { initialUserId: string }) {
   const router = useRouter();
-  const [role, setRole] = useState<Role>(initialRole);
+  const [userId, setUserId] = useState(initialUserId);
   const [pending, start] = useTransition();
 
-  async function change(next: Role) {
-    setRole(next);
+  async function change(next: string) {
+    setUserId(next);
     await fetch("/api/role", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ role: next }),
+      body: JSON.stringify({ userId: next }),
     });
     start(() => router.refresh());
   }
@@ -23,16 +27,20 @@ export function RoleSwitcher({ initialRole }: { initialRole: Role }) {
     <label className="flex items-center gap-2 text-xs text-slate-500">
       <span className="hidden sm:inline">Acting as</span>
       <select
-        aria-label="Acting as role"
-        value={role}
+        aria-label="Acting as person"
+        value={userId}
         disabled={pending}
-        onChange={(e) => change(e.target.value as Role)}
+        onChange={(e) => change(e.target.value)}
         className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
       >
-        {ROLES.map((r) => (
-          <option key={r.value} value={r.value}>
-            {r.label}
-          </option>
+        {GROUPS.map((role) => (
+          <optgroup key={role} label={roleLabel(role)}>
+            {PERSONNEL.filter((p) => p.role === role).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
     </label>

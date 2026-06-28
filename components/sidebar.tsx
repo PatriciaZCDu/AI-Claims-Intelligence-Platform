@@ -3,8 +3,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, ClipboardList, FilePlus, Gauge, GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Role } from "@/lib/types";
 
-export const NAV = [
+export type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  match: (p: string) => boolean;
+  roles?: Role[]; // when set, only these roles see the item
+};
+
+export const NAV: NavItem[] = [
   { href: "/", label: "Command Center", icon: LayoutDashboard, match: (p: string) => p === "/" },
   {
     href: "/claims",
@@ -13,20 +22,31 @@ export const NAV = [
     match: (p: string) => p === "/claims" || (p.startsWith("/claims/") && p !== "/claims/new"),
   },
   { href: "/claims/new", label: "New Claim", icon: FilePlus, match: (p: string) => p === "/claims/new" },
-  { href: "/operations", label: "Model Operations", icon: Gauge, match: (p: string) => p === "/operations" },
+  {
+    href: "/operations",
+    label: "Model Operations",
+    icon: Gauge,
+    match: (p: string) => p === "/operations",
+    roles: ["ops_leader"],
+  },
   {
     href: "/operations/learning",
     label: "Learning Loop",
     icon: GitBranch,
     match: (p: string) => p === "/operations/learning",
+    roles: ["ops_leader"],
   },
 ];
 
-export function Sidebar() {
+export function navForRole(role: Role): NavItem[] {
+  return NAV.filter((item) => !item.roles || item.roles.includes(role));
+}
+
+export function Sidebar({ role }: { role: Role }) {
   const path = usePathname();
   return (
     <nav className="flex flex-col gap-1 px-3">
-      {NAV.map((item) => {
+      {navForRole(role).map((item) => {
         const Icon = item.icon;
         const on = item.match(path);
         return (

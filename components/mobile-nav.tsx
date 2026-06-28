@@ -2,16 +2,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { NAV } from "./sidebar";
+import type { Role } from "@/lib/types";
+import { navForRole } from "./sidebar";
 
-export function MobileNav() {
+export function MobileNav({ role }: { role: Role }) {
   const path = usePathname();
   return (
     <nav
       aria-label="Primary"
       className="flex gap-1 overflow-x-auto border-b border-slate-200 bg-brand px-3 py-2 md:hidden"
     >
-      {NAV.map((item) => {
+      {navForRole(role).map((item) => {
         const Icon = item.icon;
         const on = item.match(path);
         return (
