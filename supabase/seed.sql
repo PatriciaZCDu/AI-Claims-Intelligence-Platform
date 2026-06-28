@@ -84,6 +84,71 @@ select
   850 + floor(random()*700)::int, created_at, created_at + interval '4 seconds'
 from _seed;
 
+-- Itemized findings for high/medium-confidence claims, derived from the same
+-- repair_prices table the live pipeline uses. Each claim gets a deterministic
+-- "damage scenario"; cost_low/high + overall severity are recomputed from the
+-- findings so the summary and the breakdown always agree. Low-confidence (<70%)
+-- claims stay finding-less — the honest "couldn't localize damage" state.
+with scen(scenario, ord, pkey, sev, display, loc, evidence) as (values
+  (0,1,'bumper','medium','Front bumper','Front-center bumper','Fracture across the lower fascia with paint loss'),
+  (0,2,'headlight','medium','Headlight','Front-right headlight','Lens cracked and housing displaced'),
+  (0,3,'hood','low','Hood','Hood leading edge','Shallow dent near the front edge'),
+  (1,1,'bumper','medium','Rear bumper','Rear-center bumper','Cracked fascia with paint transfer'),
+  (1,2,'taillight','low','Taillight','Rear-left taillight','Hairline crack across the lens'),
+  (2,1,'door','medium','Front door','Front-left door','Deep crease along the door skin'),
+  (2,2,'fender','medium','Fender','Front-left fender','Buckling above the wheel arch'),
+  (2,3,'mirror','low','Side mirror','Left side mirror','Housing cracked, glass intact'),
+  (3,1,'door','low','Rear door','Rear-right door','Long scrape with shallow denting'),
+  (3,2,'quarter_panel','medium','Quarter panel','Right quarter panel','Creasing aft of the rear door'),
+  (4,1,'bumper','high','Front bumper','Front-left bumper','Severe fracture with mounting-tab separation'),
+  (4,2,'fender','high','Fender','Front-left fender','Major buckling and inward displacement'),
+  (4,3,'headlight','high','Headlight','Front-left headlight','Assembly shattered, mount broken'),
+  (5,1,'bumper','low','Front bumper','Front bumper','Scuffing with a minor fascia crack'),
+  (5,2,'grille','low','Grille','Front grille','Cracked grille slats'),
+  (6,1,'hood','medium','Hood','Hood','Multiple dents across the panel'),
+  (6,2,'fender','low','Fender','Right fender','Scattered minor dents'),
+  (7,1,'quarter_panel','high','Quarter panel','Right rear quarter panel','Deep crease with metal tearing'),
+  (7,2,'taillight','medium','Taillight','Rear-right taillight','Lens fractured and housing cracked'),
+  (7,3,'bumper','medium','Rear bumper','Rear bumper corner','Corner fascia separation'),
+  (8,1,'windshield','medium','Windshield','Windshield','Spider crack from the lower passenger side'),
+  (8,2,'hood','low','Hood','Hood','Stone chips and a shallow dent'),
+  (9,1,'door','medium','Driver door','Driver door','Dent with paint damage mid-panel')
+),
+tgt as (
+  select a.id, a.confidence,
+         (get_byte(decode(md5(a.claim_id::text), 'hex'), 0) % 10) as scenario
+  from assessments a
+  where a.confidence >= 70
+    and (a.findings is null or jsonb_array_length(a.findings) = 0)
+),
+rws as (
+  select t.id, t.confidence, s.ord, s.sev, s.display, s.loc, s.evidence,
+         rp.cost_low, rp.cost_high
+  from tgt t
+  join scen s on s.scenario = t.scenario
+  join repair_prices rp on rp.component = s.pkey and rp.severity = s.sev::severity
+),
+agg as (
+  select id,
+    jsonb_agg(jsonb_build_object(
+      'component', display, 'severity', sev,
+      'confidence', greatest(70, least(99, round(confidence)::int - (ord - 1))),
+      'evidence', evidence, 'location', loc,
+      'costLow', cost_low, 'costHigh', cost_high
+    ) order by ord) as findings,
+    sum(cost_low)::int  as cost_low,
+    sum(cost_high)::int as cost_high,
+    (case when bool_or(sev = 'high') then 'high'
+          when bool_or(sev = 'medium') then 'medium'
+          else 'low' end)::severity as severity
+  from rws group by id
+)
+update assessments a
+set findings = agg.findings, cost_low = agg.cost_low,
+    cost_high = agg.cost_high, severity = agg.severity
+from agg
+where a.id = agg.id;
+
 -- Adjuster reviews on completed claims → drive the live "human override rate"
 -- metric and the per-adjuster scorecard. Each review is attributed to one of the
 -- four Claims Adjusters, whose modify (override) rates deliberately differ so the
