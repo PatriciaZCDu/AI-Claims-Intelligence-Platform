@@ -1,7 +1,9 @@
-import { ArrowDown } from "lucide-react";
+import Link from "next/link";
+import { ArrowDown, Lock } from "lucide-react";
 import { Card, PageHeader } from "@/components/ui";
+import { getRole, CAN, roleLabel } from "@/lib/rbac";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 const LOOP = [
   { title: "Adjuster Corrections", blurb: "Every modify/override is captured as a signal" },
@@ -13,7 +15,31 @@ const LOOP = [
   { title: "Production Release", blurb: "Promoted as e.g. Vision Model 4.3" },
 ];
 
-export default function LearningPage() {
+export default async function LearningPage() {
+  const role = await getRole();
+  if (!CAN.viewOps(role)) {
+    return (
+      <div>
+        <PageHeader title="Continuous Learning Loop" subtitle="Model improvement pipeline" />
+        <Card className="border-amber-200 bg-amber-50">
+          <div className="flex items-start gap-3 p-5">
+            <Lock className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <div className="space-y-2 text-sm text-amber-800">
+              <p>
+                This view is part of the Operations dashboard, visible only to the{" "}
+                <strong>Operations Leader</strong>. You are acting as{" "}
+                <strong>{roleLabel(role)}</strong>.
+              </p>
+              <Link href="/" className="inline-block font-medium text-amber-800 hover:text-amber-900">
+                ← Back to Command Center
+              </Link>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHeader

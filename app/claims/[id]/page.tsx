@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Loader2, FileSearch, ShieldCheck, ScrollText, ArrowRight, ChevronLeft } from "lucide-react";
 import { getClaimBundle } from "@/lib/data";
-import { getRole, CAN } from "@/lib/rbac";
+import { getRole, CAN, roleLabel } from "@/lib/rbac";
 import { ROUTING_META } from "@/lib/routing";
 import { moneyRange } from "@/lib/utils";
 import {
@@ -30,7 +30,7 @@ export default async function ClaimDetail({ params }: { params: Promise<{ id: st
   const bundle = await getClaimBundle(id);
   if (!bundle) notFound();
 
-  const { claim, assessment, images } = bundle;
+  const { claim, assessment, images, reviews } = bundle;
   const vehicle =
     [claim.vehicle_year, claim.vehicle_make, claim.vehicle_model].filter(Boolean).join(" ") ||
     "Vehicle";
@@ -208,6 +208,25 @@ export default async function ClaimDetail({ params }: { params: Promise<{ id: st
               </div>
             )}
           </Card>
+
+          {CAN.viewAdjusterInfo(role) && reviews.length > 0 && (
+            <Card>
+              <CardHeader title="Review history" subtitle="Who reviewed this claim" />
+              <ul className="divide-y divide-slate-100">
+                {reviews.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-2 px-5 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">
+                        {r.reviewer_name ?? roleLabel(r.reviewer_role)}
+                      </p>
+                      <p className="text-xs text-slate-500">{roleLabel(r.reviewer_role)}</p>
+                    </div>
+                    <Badge tone={r.decision === "modify" ? "amber" : "slate"}>{r.decision}</Badge>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
 
           <Card>
             <CardHeader title="Human review" subtitle="AI recommends · humans decide" />

@@ -9,6 +9,13 @@ import { QuickDecision } from "@/components/quick-decision";
 
 export const dynamic = "force-dynamic";
 
+const DECISION_LABEL: Record<string, string> = {
+  accept: "Accepted AI findings",
+  modify: "Modified findings",
+  escalate: "Escalated",
+  request_photos: "Requested more photos",
+};
+
 export default async function SeniorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const role = await getRole();
@@ -59,6 +66,7 @@ export default async function SeniorPage({ params }: { params: Promise<{ id: str
     assessment?.cost_low != null && assessment?.cost_high != null
       ? Math.round((assessment.cost_low + assessment.cost_high) / 2)
       : null;
+  const adjusterReviews = reviews.filter((r) => r.reviewer_role === "adjuster");
   const adjReview = [...reviews].reverse().find((r) => r.adjuster_estimate != null);
   const adjEstimate = adjReview?.adjuster_estimate ?? null;
   const variance =
@@ -71,6 +79,37 @@ export default async function SeniorPage({ params }: { params: Promise<{ id: str
   return (
     <div>
       {header}
+
+      <Card className="mb-6">
+        <CardHeader title="Adjuster review" subtitle="Who handled this claim and what they decided" />
+        {adjusterReviews.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-slate-500">
+            No adjuster has reviewed this claim yet.
+          </p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {adjusterReviews.map((r) => (
+              <li key={r.id} className="px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-slate-900">
+                    {r.reviewer_name ?? "Claims Adjuster"}
+                  </span>
+                  <Badge tone={r.decision === "modify" ? "amber" : "slate"}>
+                    {DECISION_LABEL[r.decision] ?? r.decision}
+                  </Badge>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-slate-500">
+                  {r.adjuster_estimate != null && <span>Estimate {money(r.adjuster_estimate)}</span>}
+                  {r.variance != null && <span>Variance {r.variance > 0 ? "+" : ""}{r.variance}%</span>}
+                  <span>{new Date(r.created_at).toLocaleString()}</span>
+                </div>
+                {r.notes && <p className="mt-1.5 text-sm text-slate-700">{r.notes}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader title="Estimate comparison" subtitle="AI vs. adjuster" />

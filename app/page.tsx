@@ -1,5 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { getCommandCenter } from "@/lib/metrics";
+import { getRole, CAN } from "@/lib/rbac";
 import { getAdmin } from "@/lib/supabase/admin";
 import { PLATFORM, activeModelLabel } from "@/lib/platform";
 import { Badge, Card, CardHeader, DefinitionRow, NavLinkRow, PageHeader, StatTile } from "@/components/ui";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function CommandCenter() {
   const configured = Boolean(getAdmin());
   const m = await getCommandCenter();
+  const role = await getRole();
 
   return (
     <div>
@@ -64,7 +66,9 @@ export default async function CommandCenter() {
           <div className="flex flex-col gap-2 p-4">
             <NavLinkRow href="/claims/new">Create a new claim</NavLinkRow>
             <NavLinkRow href="/claims">Open the claims queue</NavLinkRow>
-            <NavLinkRow href="/operations">View model operations</NavLinkRow>
+            {CAN.viewOps(role) && (
+              <NavLinkRow href="/operations">View model operations</NavLinkRow>
+            )}
           </div>
         </Card>
       </div>
