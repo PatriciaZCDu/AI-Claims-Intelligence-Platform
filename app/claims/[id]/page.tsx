@@ -45,7 +45,7 @@ export default async function ClaimDetail({ params }: { params: Promise<{ id: st
       </Link>
       <PageHeader
         title={`Claim ${claim.claim_number}`}
-        subtitle={`${vehicle} · ${claim.deployment_region} · Policy ${claim.policy_number}`}
+        subtitle={`${vehicle} · ${claim.customer_region} · Policy ${claim.policy_number}`}
         actions={
           <>
             <Badge tone="slate">{statusLabel(claim.status)}</Badge>

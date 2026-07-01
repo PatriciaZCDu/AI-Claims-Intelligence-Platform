@@ -50,7 +50,7 @@ export default async function ClaimsQueue({
 
   const filtered = rows.filter(({ claim, assessment }: QueueRow) => {
     if (sp.status && claim.status !== sp.status) return false;
-    if (sp.region && claim.deployment_region !== sp.region) return false;
+    if (sp.region && claim.customer_region !== sp.region) return false;
     if (sp.severity && assessment?.severity !== sp.severity) return false;
     if (sp.confidence && band(assessment?.confidence ?? null) !== sp.confidence) return false;
     if (sp.routing && assessment?.routing !== sp.routing) return false;
@@ -161,7 +161,7 @@ export default async function ClaimsQueue({
                         .filter(Boolean)
                         .join(" ") || "—"}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{claim.deployment_region}</td>
+                    <td className="px-4 py-3 text-slate-600">{claim.customer_region}</td>
                     <td className="px-4 py-3">
                       <SeverityBadge severity={assessment?.severity ?? null} />
                     </td>

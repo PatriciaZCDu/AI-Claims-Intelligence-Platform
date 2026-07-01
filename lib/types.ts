@@ -25,7 +25,8 @@ export type AssessmentStatus = "queued" | "processing" | "complete" | "failed";
 
 export type StepStatus = "pending" | "running" | "complete" | "failed";
 
-export type DeploymentRegion = "US" | "EU" | "Canada";
+// The customer's region also governs data residency, so a single field covers both.
+export type CustomerRegion = "US" | "EU" | "Canada";
 
 export interface Finding {
   component: string;
@@ -43,8 +44,7 @@ export interface Claim {
   claim_number: string;
   vin: string | null;
   accident_summary: string | null;
-  customer_region: string;
-  deployment_region: DeploymentRegion;
+  customer_region: CustomerRegion;
   vehicle_make: string | null;
   vehicle_model: string | null;
   vehicle_year: number | null;

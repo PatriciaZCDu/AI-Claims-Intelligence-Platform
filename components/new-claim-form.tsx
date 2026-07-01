@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { Camera, Loader2, Check, X } from "lucide-react";
 import { Button, Card, CardHeader } from "@/components/ui";
 import { evaluateImages, validationPasses, type ImageMeta } from "@/lib/validation";
-import { cn } from "@/lib/utils";
 
 type Kind = "front" | "rear" | "side" | "damage";
 const KINDS: Kind[] = ["front", "rear", "side", "damage"];
@@ -40,8 +39,7 @@ export function NewClaimForm() {
     claim_number: "",
     vin: "",
     accident_summary: "",
-    customer_region: "US-East",
-    deployment_region: "US",
+    customer_region: "US",
     vehicle_make: "",
     vehicle_model: "",
     vehicle_year: "",
@@ -145,7 +143,7 @@ export function NewClaimForm() {
                 onChange={(e) => set("customer_region", e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               >
-                {["US-East", "US-West", "US-Central", "EU-West", "CA-East"].map((r) => (
+                {["US", "EU", "Canada"].map((r) => (
                   <option key={r}>{r}</option>
                 ))}
               </select>
@@ -163,26 +161,6 @@ export function NewClaimForm() {
             <Field label="Vehicle Make" value={fields.vehicle_make} onChange={(v) => set("vehicle_make", v)} />
             <Field label="Vehicle Model" value={fields.vehicle_model} onChange={(v) => set("vehicle_model", v)} />
             <Field label="Vehicle Year" value={fields.vehicle_year} onChange={(v) => set("vehicle_year", v)} />
-            <div>
-              <FieldLabel>Deployment Region (data residency)</FieldLabel>
-              <div className="flex gap-2">
-                {["US", "EU", "Canada"].map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => set("deployment_region", r)}
-                    className={cn(
-                      "flex-1 rounded-lg border px-3 py-2 text-sm font-medium",
-                      fields.deployment_region === r
-                        ? "border-blue-600 bg-blue-50 text-blue-700"
-                        : "border-slate-300 text-slate-600 hover:bg-slate-50",
-                    )}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </Card>
 

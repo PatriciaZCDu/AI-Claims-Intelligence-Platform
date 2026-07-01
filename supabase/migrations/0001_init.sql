@@ -20,8 +20,7 @@ create table claims (
   claim_number      text not null,
   vin               text,
   accident_summary  text,
-  customer_region   text not null default 'US-East',
-  deployment_region text not null default 'US',
+  customer_region   text not null default 'US', -- also governs data residency
   vehicle_make      text,
   vehicle_model     text,
   vehicle_year      int,

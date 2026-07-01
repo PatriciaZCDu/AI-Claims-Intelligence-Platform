@@ -50,14 +50,13 @@ from (
   ) s
 ) x;
 
-insert into claims (id, policy_number, claim_number, vin, customer_region, deployment_region,
+insert into claims (id, policy_number, claim_number, vin, customer_region,
                     vehicle_make, vehicle_model, vehicle_year, status, created_at, assigned_to)
 select
   id,
   'POL-' || lpad(i::text, 6, '0'),
   (20000 + i)::text,
   upper(substr(md5(id::text), 1, 17)),
-  (array['US-East','US-West','US-Central','EU-West','CA-East'])[1 + floor(random()*5)::int],
   (array['US','US','US','EU','Canada'])[1 + floor(random()*5)::int],
   (array['Toyota','Honda','Ford','Tesla','BMW','Chevrolet','Nissan','Hyundai','Subaru','Kia'])[mi],
   (array['Camry','Civic','F-150','Model Y','3 Series','Silverado','Altima','Elantra','Outback','Sorento'])[mi],
@@ -203,9 +202,9 @@ join (values
 -- 10021 · Toyota Camry · 96% · Standard review · full audit trail
 with c as (
   insert into claims (policy_number, claim_number, vin, accident_summary, customer_region,
-                      deployment_region, vehicle_make, vehicle_model, vehicle_year, status, created_at, assigned_to)
+                      vehicle_make, vehicle_model, vehicle_year, status, created_at, assigned_to)
   values ('POL-100021','10021','4T1BF1FK5HU123456','Low-speed front-end collision in a parking lot',
-          'US-East','US','Toyota','Camry',2023,'adjuster_review', now() - interval '2 hours',
+          'US','Toyota','Camry',2023,'adjuster_review', now() - interval '2 hours',
           '11111111-1111-1111-1111-111111111101')
   returning id, created_at
 ),
@@ -231,9 +230,9 @@ union all select id,'adjuster','Adjuster Updated Severity','{}'::jsonb, created_
 -- 10022 · Tesla Model Y · 62% · Low confidence → escalated
 with c as (
   insert into claims (policy_number, claim_number, vin, accident_summary, customer_region,
-                      deployment_region, vehicle_make, vehicle_model, vehicle_year, status, created_at, assigned_to)
+                      vehicle_make, vehicle_model, vehicle_year, status, created_at, assigned_to)
   values ('POL-100022','10022','5YJYGDEE7MF123456','Side-impact collision; customer has not yet uploaded damage photos.',
-          'US-West','US','Tesla','Model Y',2022,'adjuster_review', now() - interval '90 minutes',
+          'US','Tesla','Model Y',2022,'adjuster_review', now() - interval '90 minutes',
           '11111111-1111-1111-1111-111111111102')
   returning id, created_at
 )
@@ -248,9 +247,9 @@ from c;
 -- 10023 · Honda Civic · 88% · Enhanced review
 with c as (
   insert into claims (policy_number, claim_number, vin, accident_summary, customer_region,
-                      deployment_region, vehicle_make, vehicle_model, vehicle_year, status, created_at, assigned_to)
+                      vehicle_make, vehicle_model, vehicle_year, status, created_at, assigned_to)
   values ('POL-100023','10023','19XFC2F50JE123456','Rear-end collision at a stop light',
-          'US-Central','US','Honda','Civic',2021,'adjuster_review', now() - interval '70 minutes',
+          'US','Honda','Civic',2021,'adjuster_review', now() - interval '70 minutes',
           '11111111-1111-1111-1111-111111111103')
   returning id, created_at
 )
